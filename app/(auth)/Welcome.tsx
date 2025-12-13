@@ -12,16 +12,6 @@ const Welcome = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleGetStarted = async () => {
-    setLoading(true);
-    // Simulate an async operation (e.g., navigation, API call, etc.)
-    // Replace this with your actual logic
-    setTimeout(() => {
-      setLoading(false);
-      // Add your navigation or other logic here
-    }, 2000);
-  };
-
   return (
     <Screenwrapper showPattern={true} bgOpacity={0.8}>
       <View style={styles.container}>

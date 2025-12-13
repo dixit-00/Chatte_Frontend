@@ -1,17 +1,38 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, StatusBar, View } from "react-native";
 import { colors } from "@/constants/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useAuth } from "@/context/authContext";
 import { useRouter } from "expo-router";
 
 const SplashScreen = () => {
+  const { token, isLoading } = useAuth();
   const router = useRouter();
+  const [minSplashTimePassed, setMinSplashTimePassed] = useState(false);
+  const hasNavigated = useRef(false);
 
+  // Minimum splash screen duration (2 seconds)
   useEffect(() => {
-    setTimeout(() => {
-      router.replace("/(auth)/Welcome" as never);
+    const timer = setTimeout(() => {
+      setMinSplashTimePassed(true);
     }, 2000);
-  }, [router]);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Navigate once both conditions are met: splash time passed AND auth check complete
+  useEffect(() => {
+    if (minSplashTimePassed && !isLoading && !hasNavigated.current) {
+      hasNavigated.current = true;
+      if (token) {
+        // User is logged in, go to home
+        router.replace("/(main)/home");
+      } else {
+        // User is not logged in, go to welcome
+        router.replace("/(auth)/Welcome");
+      }
+    }
+  }, [minSplashTimePassed, isLoading, token, router]);
 
   return (
     <View style={styles.container}>
