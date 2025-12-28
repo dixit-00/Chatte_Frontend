@@ -174,7 +174,7 @@ const ProfileModal = () => {
           </View>
           <View style={{ paddingLeft: spacingY._20 }}>
             <View style={styles.InputContainer}>
-              <Typo style={{ paddingLeft: spacingX._10 }}>Email</Typo>
+              <Typo style={{ paddingLeft: spacingX._10 }}>Name</Typo>
 
               <Input
                 value={userData.name}

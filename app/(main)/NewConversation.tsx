@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { router, useLocalSearchParams, useRouter } from "expo-router";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { colors, radius, spacingX, spacingY } from "@/constants/theme";
@@ -20,16 +20,39 @@ import { Alert } from "react-native";
 import { Button } from "@react-navigation/elements";
 import Loading from "@/components/Loading";
 import Botton from "@/components/Botton";
+import { getContacts, newConversation } from "@/socket/socketEvents";
 
 const NewConversation = () => {
   const { isGroup } = useLocalSearchParams();
   const isGroupMode = isGroup == "1";
   const router = useRouter();
+  const [contacts, setContacts] = useState([]);
   const [groupAvatar, setGroupAvatar] = useState<{ uri: string } | null>(null);
   const [groupName, setGroupName] = useState("");
   const [selectParticipants, setSelectParticipants] = useState<string[]>([]);
   const { user: currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    getContacts(processGetContacts);
+    newConversation(processNewConversation);
+    getContacts(null);
+
+    return () => {
+      getContacts(processGetContacts, true);
+      newConversation(processNewConversation, true);
+    };
+  }, []);
+
+  const processGetContacts = (res: any) => {
+    if (res.success) {
+      setContacts(res.data);
+    }
+  };
+  const processNewConversation = (res: any) => {
+    console.log("newConversation", res.data);
+  };
+
   const toggleParticipant = (user: any) => {
     setSelectParticipants((prev: any) => {
       if (prev.includes(user.id)) {
@@ -46,30 +69,18 @@ const NewConversation = () => {
     }
     if (isGroupMode) {
       toggleParticipant(user);
+    } else {
+      newConversation({
+        type: "direct",
+        participants: [currentUser.id, user.id],
+      });
     }
   };
 
   const createGroup = async () => {
-    if (!groupName.trim() || !currentUser || selectParticipants.length >= 2);
-    return;
+    if (!groupName.trim() || !currentUser || selectParticipants.length >= 2)
+      return;
   };
-  const contacts = [
-    {
-      id: "1",
-      name: "Olivia Moore",
-      avatar: "https://i.pravatar.cc/150?img=14",
-    },
-    {
-      id: "2",
-      name: "James Anderson",
-      avatar: "https://i.pravatar.cc/150?img=15",
-    },
-    {
-      id: "3",
-      name: "Ava Thomas",
-      avatar: "https://i.pravatar.cc/150?img=16",
-    },
-  ];
   const onPickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],

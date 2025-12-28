@@ -88,10 +88,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
-    const response = await login(email, password);
-    await updateToken(response.token);
-    await connectSocket();
-    router.replace("/(main)/home");
+    try {
+      const response = await login(email, password);
+      await updateToken(response.token);
+      
+      // Try to connect socket, but don't block login if it fails
+      try {
+        await connectSocket();
+      } catch (socketError) {
+        console.warn("[Auth] Socket connection failed, will retry later:", socketError);
+      }
+      
+      router.replace("/(main)/home");
+    } catch (error: any) {
+      console.error("[Auth] Sign in failed:", error.message);
+      throw error; // Re-throw so UI can show the error
+    }
   };
 
   const signUp = async (
@@ -107,11 +119,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Then auto-login
       const response = await login(email, password);
       await updateToken(response.token);
-      await connectSocket();
+      
+      // Try to connect socket, but don't block signup if it fails
+      try {
+        await connectSocket();
+      } catch (socketError) {
+        console.warn("[Auth] Socket connection failed, will retry later:", socketError);
+      }
+      
       router.replace("/(main)/home");
-    } catch (error) {
-      console.error("Sign up error:", error);
-      throw error;
+    } catch (error: any) {
+      console.error("[Auth] Sign up error:", error.message);
+      throw error; // Re-throw so UI can show the error
     }
   };
   const signOut = async () => {

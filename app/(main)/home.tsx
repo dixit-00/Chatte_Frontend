@@ -11,7 +11,11 @@ import Typo from "../../components/typo";
 import { colors, radius, spacingX, spacingY } from "@/constants/theme";
 import { useAuth } from "@/context/authContext";
 import Button from "@/components/Botton";
-import { testSocket } from "@/socket/socketEvents";
+import {
+  getConversations,
+  newConversation,
+  testSocket,
+} from "@/socket/socketEvents";
 import * as Icons from "phosphor-react-native";
 import { useRouter } from "expo-router";
 import { verticalScale } from "@/utils/styling";
@@ -19,6 +23,8 @@ import { useState } from "react";
 import ConversationsItems from "@/components/ConversationsItems";
 import Loading from "@/components/Loading";
 import Botton from "@/components/Botton";
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+import { ConversationProps, ResponseProps } from "@/types";
 
 const Home = () => {
   const { user, signOut } = useAuth();
@@ -26,6 +32,7 @@ const Home = () => {
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [conversations, setConversations] = useState<ConversationProps[]>([]);
 
   useEffect(() => {
     testSocket(testSocketCallbackHandler);
@@ -36,6 +43,29 @@ const Home = () => {
     };
   }, []);
 
+  useEffect(() => {
+    getConversations(processConversations);
+    newConversation(newConversationCallbackHandler);
+    getConversations(null);
+
+    return () => {
+      getConversations(processConversations, true);
+      newConversation(newConversationCallbackHandler, true);
+    };
+  }, []);
+
+  const newConversationCallbackHandler = (res: ResponseProps) => {
+    if (res.success) {
+      setConversations((prev) => [res.data, ...prev]);
+    }
+  };
+
+  const processConversations = (res: ResponseProps) => {
+    if (res.success) {
+      setConversations(res.data);
+    }
+  };
+
   const testSocketCallbackHandler = (data: any) => {
     console.log("got reponse  ", data);
   };
@@ -44,111 +74,18 @@ const Home = () => {
     await signOut();
   };
 
-  const conversations = [
-    {
-      name: "Alice",
-      type: "direct",
-      lastMessage: {
-        senderName: "Alice",
-        content: "Hey! Are we still on for tonight?",
-        createdAt: "2025-06-22T18:45:00Z",
-      },
-    },
-    {
-      name: "Bob",
-      type: "direct",
-      lastMessage: {
-        senderName: "You",
-        content: "I'll send the files by evening.",
-        createdAt: "2025-06-22T17:30:10Z",
-      },
-    },
-    {
-      name: "Charlie",
-      type: "direct",
-      lastMessage: {
-        senderName: "Charlie",
-        content: "Did you check the new update?",
-        createdAt: "2025-06-22T16:12:45Z",
-      },
-    },
-    {
-      name: "Design Team",
-      type: "group",
-      lastMessage: {
-        senderName: "Emma",
-        content: "Logo draft is ready for review.",
-        createdAt: "2025-06-22T15:40:20Z",
-      },
-    },
-    {
-      name: "David",
-      type: "direct",
-      lastMessage: {
-        senderName: "David",
-        content: "Let's catch up this weekend.",
-        createdAt: "2025-06-22T14:05:55Z",
-      },
-    },
-    {
-      name: "Family Group",
-      type: "group",
-      lastMessage: {
-        senderName: "Mom",
-        content: "Dinner is at 8 PM today.",
-        createdAt: "2025-06-22T13:20:00Z",
-      },
-    },
-    {
-      name: "Eva",
-      type: "direct",
-      lastMessage: {
-        senderName: "You",
-        content: "Thanks for the help today!",
-        createdAt: "2025-06-22T12:10:30Z",
-      },
-    },
-    {
-      name: "Project Alpha",
-      type: "group",
-      lastMessage: {
-        senderName: "Manager",
-        content: "Deadline is moved to Friday.",
-        createdAt: "2025-06-22T11:45:00Z",
-      },
-    },
-    {
-      name: "Frank",
-      type: "direct",
-      lastMessage: {
-        senderName: "Frank",
-        content: "Call me when you're free.",
-        createdAt: "2025-06-22T10:25:40Z",
-      },
-    },
-    {
-      name: "Gym Buddies",
-      type: "group",
-      lastMessage: {
-        senderName: "Alex",
-        content: "Workout at 6 AM tomorrow 💪",
-        createdAt: "2025-06-22T09:00:00Z",
-      },
-    },
-  ];
-
   let directConversations = conversations
-    .filter((item: any) => item.type == "direct")
-    .sort((a: any, b: any) => {
-      const aDate = a?.lastMessage?.createdAt || a.createdAt;
-      const bDate = b?.lastMessage?.createdAt || b.createdAt;
+    .filter((item: ConversationProps) => item.type == "direct")
+    .sort((a: ConversationProps, b: ConversationProps) => {
+      const aDate = a?.lastMessage?.createdAt || a?.createdAt || new Date(0).toISOString();
+      const bDate = b?.lastMessage?.createdAt || b?.createdAt || new Date(0).toISOString();
       return new Date(bDate).getTime() - new Date(aDate).getTime();
     });
   let groupConversations = conversations
-    .filter((item: any) => item.type == "group")
-    .sort((a: any, b: any) => {
-      const aDate = a?.lastMessage?.createdAt || a.createdAt;
-      const bDate = b?.lastMessage?.createdAt || b.createdAt;
+    .filter((item: ConversationProps) => item.type == "group")
+    .sort((a: ConversationProps, b: ConversationProps) => {
+      const aDate = a?.lastMessage?.createdAt || a?.createdAt || new Date(0).toISOString();
+      const bDate = b?.lastMessage?.createdAt || b?.createdAt || new Date(0).toISOString();
       return new Date(bDate).getTime() - new Date(aDate).getTime();
     });
 
@@ -210,7 +147,7 @@ const Home = () => {
             </View>
             <View style={styles.conversationList}>
               {selectedTab == 0 &&
-                directConversations.map((item: any, index) => {
+                directConversations.map((item: ConversationProps, index) => {
                   return (
                     <ConversationsItems
                       item={item}
@@ -221,7 +158,7 @@ const Home = () => {
                   );
                 })}
               {selectedTab == 1 &&
-                groupConversations.map((item: any, index) => {
+                groupConversations.map((item: ConversationProps, index) => {
                   return (
                     <ConversationsItems
                       item={item}

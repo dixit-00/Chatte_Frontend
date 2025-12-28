@@ -5,11 +5,29 @@ import Avatar from "./Avatar";
 import Typo from "../components/typo";
 import moment from "moment";
 import { colors } from "@/constants/theme";
+import { ConversationListItemProps } from "@/types";
+import { useAuth } from "../context/authContext";
 
-const ConversationsItems = ({ item, showDivider, router }: any) => {
-  const openconversation = () => {};
+const ConversationsItems = ({
+  item,
+  showDivider,
+  router,
+}: ConversationListItemProps) => {
+  const { user: currentUserId } = useAuth();
   const lastMessage: any = item?.lastMessage;
-  const isDirect = (item.type = "direct");
+  const isDirect = item.type == "direct";
+
+  let avatar = item.avatar;
+
+  const otherParticipant = isDirect
+    ? item.participants.find((p) => p._id != currentUserId?.id)
+    : null;
+
+  // For direct messages, use the other participant's avatar
+  // For groups, use the conversation's avatar
+  if (isDirect && otherParticipant) {
+    avatar = otherParticipant.avatar;
+  }
   const getLastMessageDate = () => {
     if (!lastMessage?.createdAt) return null;
     const messageDate = moment(lastMessage.createdAt);
@@ -27,8 +45,19 @@ const ConversationsItems = ({ item, showDivider, router }: any) => {
   };
   const getLastMessageContent = () => {
     if (!lastMessage) return "say hii 👍";
-
-    return lastMessage?.attachement ? "Image" : lastMessage.content;
+    return lastMessage?.attachement ? "Image" : lastMessage.content || "say hii 👍";
+  };
+  const openconversation = () => {
+    router.push({
+      pathname: "/(main)/conversation",
+      params: {
+        id: item._id,
+        name: item.name,
+        avatar: item.avatar,
+        type: item.type,
+        participants: JSON.stringify(item.participants),
+      },
+    });
   };
   return (
     <View>
@@ -37,12 +66,12 @@ const ConversationsItems = ({ item, showDivider, router }: any) => {
         onPress={openconversation}
       >
         <View>
-          <Avatar uri={null} size={47} isGroup={item.type === "group"} />
+          <Avatar uri={avatar} size={47} isGroup={item.type == "group"} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={styles.row}>
             <Typo size={17} fontWeight="600">
-              {item.name}
+              {isDirect ? otherParticipant?.name : item.name}
             </Typo>
             {item.lastMessage && <Typo size={15}>{getLastMessageDate()}</Typo>}
           </View>
